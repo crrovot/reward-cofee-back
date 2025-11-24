@@ -1,0 +1,43 @@
+# Ignorar archivos de configuración
+/.bundle
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+
+# Ignorar variables de entorno
+.env
+.env.local
+
+# Ignorar archivos de log
+*.log
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignorar archivos de base de datos
+*.sqlite3
+*.sqlite3-*
+
+# Ignorar node_modules
+/node_modules
+
+# Ignorar archivos de storage
+/storage/*
+!/storage/.keep
+
+# Ignorar public uploads
+/public/uploads
+
+# Ignorar master key
+/config/master.key

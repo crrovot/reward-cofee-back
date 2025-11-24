@@ -1,0 +1,47 @@
+# Ignorar archivos de git
+.git
+.gitignore
+
+# Ignorar archivos de configuración local
+.env
+.env.local
+.env.*.local
+
+# Ignorar dependencias
+node_modules/
+bower_components/
+
+# Ignorar archivos de log
+*.log
+log/*
+tmp/*
+
+# Ignorar archivos de caché
+.bundle/
+vendor/bundle/
+.cache/
+
+# Ignorar archivos de test
+coverage/
+spec/tmp/
+test/tmp/
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignorar archivos de documentación
+README.md
+LICENSE
+docs/
+
+# Ignorar docker files en build
+Dockerfile*
+docker-compose*.yml
+.dockerignore
