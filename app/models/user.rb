@@ -1,6 +1,8 @@
 class User < ApplicationRecord
   has_secure_password validations: false
   has_many :purchases, foreign_key: :user_rut, primary_key: :rut, dependent: :destroy
+  has_many :redemptions, foreign_key: :user_rut, primary_key: :rut, dependent: :destroy
+  has_many :notifications, foreign_key: :user_rut, primary_key: :rut, dependent: :destroy
   
   validates :rut, presence: true, uniqueness: true
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -22,6 +24,42 @@ class User < ApplicationRecord
     elsif email.present?
       find_by(email: email.downcase.strip)
     end
+  end
+
+  # QR Token management
+  def generate_qr_token!
+    token = SecureRandom.urlsafe_base64(32)
+    expires_at = 1.hour.from_now
+    update!(qr_token: token, qr_token_expires_at: expires_at)
+    { token: token, expires_at: expires_at }
+  end
+
+  def qr_token_valid?
+    qr_token.present? && qr_token_expires_at.present? && qr_token_expires_at > Time.current
+  end
+
+  def self.find_by_qr_token(token)
+    return nil if token.blank?
+    user = find_by(qr_token: token)
+    return nil unless user&.qr_token_valid?
+    user
+  end
+
+  # Stamps management
+  def add_stamps(count = 1)
+    self.stamps = (stamps || 0) + count
+  end
+
+  def add_points(points)
+    self.total_points = (total_points || 0) + points
+  end
+
+  def available_rewards_count
+    stamps_paid - rewards_used
+  end
+
+  def current_stamps_progress
+    purchases.count % 10
   end
   
   private

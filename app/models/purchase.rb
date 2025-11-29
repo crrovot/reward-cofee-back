@@ -1,5 +1,6 @@
 class Purchase < ApplicationRecord
   belongs_to :user, foreign_key: :user_rut, primary_key: :rut
+  belongs_to :location_record, class_name: 'Location', foreign_key: :location_id, optional: true
   
   validates :amount, presence: true, numericality: { greater_than: 0 }
   validates :user_rut, presence: true
@@ -13,7 +14,8 @@ class Purchase < ApplicationRecord
   private
   
   def calculate_points
-    self.points_earned = (amount / 100).floor
+    self.points_earned ||= (amount / 100).floor
+    self.stamps_earned ||= 1
   end
   
   def update_user_stats
