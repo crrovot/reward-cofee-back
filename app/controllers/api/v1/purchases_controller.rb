@@ -6,7 +6,7 @@ module Api
       # POST /api/v1/purchases
       def create
         user = User.find_by(rut: params[:rut])
-        return render json: { success: false, message: 'Usuario no encontrado' }, status: :not_found unless user
+        return render json: { success: false, message: 'Usuario no encontrado', error_code: 'USER_NOT_FOUND' }, status: :not_found unless user
 
         # Calcular total
         total = params[:items].sum { |item| item[:price] * item[:quantity] }
@@ -57,18 +57,49 @@ module Api
         unless user
           return render json: {
             success: false,
-            message: 'user_not_found'
+            message: 'user_not_found',
+            error_code: 'USER_NOT_FOUND'
           }, status: :not_found
         end
         
-        purchases = user.purchases.recent
+        page = (params[:page] || 1).to_i
+        limit = (params[:limit] || params[:per_page] || 20).to_i
+        limit = [limit, 100].min # Max 100 por página
+        
+        total_count = user.purchases.count
+        total_pages = (total_count.to_f / limit).ceil
+        
+        paginated = user.purchases.recent.offset((page - 1) * limit).limit(limit)
         
         render json: {
           success: true,
-          purchases: purchases.map { |p| purchase_response(p) },
-          total_purchases: purchases.count,
-          total_spent: purchases.sum(:amount),
-          total_points: purchases.sum(:points_earned)
+          purchases: paginated.map { |p| purchase_response(p) },
+          pagination: {
+            page: page,
+            limit: limit,
+            total: total_count,
+            totalPages: total_pages
+          }
+        }, status: :ok
+      end
+
+      # GET /api/v1/users/:rut/purchases/recent
+      def recent
+        user = User.find_by(rut: format_rut(params[:rut]))
+        
+        unless user
+          return render json: {
+            success: false,
+            message: 'user_not_found',
+            error_code: 'USER_NOT_FOUND'
+          }, status: :not_found
+        end
+        
+        recent_purchases = user.purchases.recent.limit(5)
+        
+        render json: {
+          success: true,
+          purchases: recent_purchases.map { |p| recent_purchase_response(p) }
         }, status: :ok
       end
       
@@ -81,7 +112,8 @@ module Api
         unless @user
           render json: {
             success: false,
-            message: 'user_not_found'
+            message: 'user_not_found',
+            error_code: 'USER_NOT_FOUND'
           }, status: :not_found
         end
       end
@@ -98,11 +130,12 @@ module Api
       def purchase_response(purchase)
         {
           id: purchase.id,
-          rut: format_rut_display(purchase.user_rut),
+          location: purchase.location || "Sucursal Principal",
+          date: purchase.created_at.iso8601,
           amount: purchase.amount.to_f,
           points_earned: purchase.points_earned,
-          products: purchase.products,
-          created_at: purchase.created_at.iso8601
+          stamps_earned: purchase.stamps_earned || 1,
+          products: purchase.products
         }.compact
       end
       
@@ -118,6 +151,15 @@ module Api
         return rut if rut.blank?
         clean = rut.gsub(/[^0-9kK]/, '')
         "#{clean[0..-2]}-#{clean[-1]}"
+      end
+
+      def recent_purchase_response(purchase)
+        {
+          id: purchase.id,
+          location: purchase.location || "Sucursal Principal",
+          date: purchase.created_at.iso8601,
+          stamps_earned: purchase.stamps_earned || 1
+        }
       end
     end
   end

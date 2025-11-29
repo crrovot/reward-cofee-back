@@ -1,6 +1,63 @@
 module Api
   module V1
     class AuthController < BaseController
+      # GET /api/v1/auth/status
+      def status
+        token = request.headers['Authorization']&.split(' ')&.last
+        if token.blank?
+          return render json: { 
+            success: false,
+            authenticated: false 
+          }, status: :ok
+        end
+        begin
+          payload = JWT.decode(token, Rails.application.secret_key_base)[0]
+          user = User.find_by(id: payload['user_id'], rut: payload['rut'])
+          if user
+            render json: { 
+              success: true,
+              authenticated: true, 
+              user: {
+                rut: format_rut_display(user.rut),
+                name: user.name,
+                email: user.email
+              }
+            }, status: :ok
+          else
+            render json: { 
+              success: false,
+              authenticated: false 
+            }, status: :ok
+          end
+        rescue JWT::DecodeError, JWT::ExpiredSignature
+          render json: { 
+            success: false,
+            authenticated: false 
+          }, status: :ok
+        end
+      end
+
+      # POST /api/v1/auth/logout
+      def logout
+        # Con JWT stateless, el logout es manejado por el cliente eliminando el token
+        # Pero podemos invalidar el QR token si existe
+        token = request.headers['Authorization']&.split(' ')&.last
+        if token.present?
+          begin
+            payload = JWT.decode(token, Rails.application.secret_key_base)[0]
+            user = User.find_by(id: payload['user_id'])
+            user&.update(qr_token: nil, qr_token_expires_at: nil)
+          rescue JWT::DecodeError, JWT::ExpiredSignature
+            # Token inválido, ignorar
+          end
+        end
+
+        render json: {
+          success: true,
+          message: "Sesión cerrada correctamente"
+        }, status: :ok
+      end
+
       # POST /api/v1/auth/login
       def login
         rut = params[:rut]
